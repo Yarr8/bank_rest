@@ -1,8 +1,44 @@
-#
-# application.yml — главный конфигурационный файл Spring Boot.
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
-Что нужно сделать:
-  - Указать настройки подключения к базе данных.
-  - Указать порт приложения.
-  - Настроить параметры безопасности и JWT.
-  - Включить Swagger UI.
+  application:
+    name: bank-cards-system
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:cards}
+    username: ${DB_USERNAME:user}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  liquibase:
+    change-log: classpath:db/migration/db.changelog-master.yaml
+    enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    com.example.bankcards: DEBUG
+    org.springframework.security: DEBUG
+    org.liquibase: INFO
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890123456789012345678901234567890}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours
+
+# Application Configuration
+app:
+  encryption:
+    key: ${CARD_ENCRYPTION_KEY:MyCardKey1234567} # 16 symbols for AES-128

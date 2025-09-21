@@ -1,0 +1,15 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:bankcards}
+    username: ${DB_USERNAME:bankcards}
+    password: ${DB_PASSWORD:bankcards}
+  liquibase:
+    change-log: classpath:db/migration/db.changelog-master.yaml
+    enabled: true
+
+logging:
+  level:
+    com.example.bankcards: DEBUG
