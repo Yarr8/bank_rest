@@ -12,10 +12,13 @@ import java.util.Optional;
 @Repository
 public interface CardRepository extends JpaRepository<Card, Long> {
     List<Card> findByUserId(Long userId);
+
     List<Card> findByUserIdAndStatus(Long userId, Card.CardStatus status);
+
     Optional<Card> findByCardNumber(String cardNumber);
 
     // pageable
     Page<Card> findByUserId(Long userId, Pageable pageable);
+
     Page<Card> findByUserIdAndStatus(Long userId, Card.CardStatus status, Pageable pageable);
 }

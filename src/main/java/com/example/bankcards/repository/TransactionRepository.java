@@ -10,5 +10,6 @@ import java.util.List;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByFromCardUserIdOrToCardUserId(Long userId, Long userId2);
+
     List<Transaction> findByFromCardOrToCard(Card fromCard, Card toCard);
 }
