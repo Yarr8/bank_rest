@@ -6,6 +6,8 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.example.bankcards.util.CardNumberAttributeConverter;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,6 +29,7 @@ public class Card {
     @NotBlank(message = "Card number is required")
     @Size(min = 16, max = 16, message = "Card number must be exactly 16 digits")
     @Column(name = "card_number", nullable = false, unique = true)
+    @Convert(converter = CardNumberAttributeConverter.class)
     private String cardNumber;
     
     @NotBlank(message = "Owner name is required")
