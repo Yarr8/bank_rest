@@ -1,11 +1,15 @@
 package com.example.bankcards.controller;
 
+import com.example.bankcards.dto.AdminCardCreateRequest;
 import com.example.bankcards.dto.AdminAuthRegisterRequest;
 import com.example.bankcards.dto.UserCreateRequest;
 import com.example.bankcards.dto.UserUpdateRequest;
+import com.example.bankcards.entity.Card;
+import com.example.bankcards.entity.CardBlockRequest;
 import com.example.bankcards.entity.User;
 import com.example.bankcards.repository.UserRepository;
 import com.example.bankcards.security.JwtUtil;
+import com.example.bankcards.util.CardMasker;
 import com.example.bankcards.service.CardBlockRequestService;
 import com.example.bankcards.service.CardService;
 import com.example.bankcards.service.UserService;
@@ -22,12 +26,15 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -43,6 +50,12 @@ class AdminControllerIntegrationTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private CardService cardService;
+
+    @MockitoBean
+    private CardBlockRequestService cardBlockRequestService;
 
     @MockitoBean
     private UserRepository userRepository;
@@ -354,4 +367,208 @@ class AdminControllerIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Invalid role: INVALID"));
     }
+
+    @Test
+    void createCard_ShouldCreateCardSuccessfullyForAdmin() throws Exception {
+        Card newCard = Card.builder()
+                .id(1L)
+                .cardNumber("1234567890123456")
+                .owner("Test Owner")
+                .expiryDate(LocalDate.now().plusYears(1))
+                .status(Card.CardStatus.ACTIVE)
+                .balance(BigDecimal.ZERO)
+                .user(testUser)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        when(cardService.createCard(any(Card.class), anyLong())).thenReturn(newCard);
+
+        String requestBody = objectMapper.writeValueAsString(new AdminCardCreateRequest(
+                2L, "1234567890123456", "Test Owner", LocalDate.now().plusYears(1), BigDecimal.ZERO
+        ));
+
+        String maskedCardNumber = CardMasker.maskCardNumber(newCard.getCardNumber());
+        mockMvc.perform(post("/api/admin/cards")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.cardNumber").value(maskedCardNumber))
+                .andExpect(jsonPath("$.owner").value("Test Owner"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void blockCard_ShouldBlockCardSuccessfullyForAdmin() throws Exception {
+        Card blockedCard = Card.builder()
+                .id(1L)
+                .cardNumber("1234567890123456")
+                .owner("Test Owner")
+                .expiryDate(LocalDate.now().plusYears(1))
+                .status(Card.CardStatus.BLOCKED)
+                .balance(BigDecimal.ZERO)
+                .user(testUser)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        when(cardService.blockCard(1L)).thenReturn(blockedCard);
+
+        mockMvc.perform(put("/api/admin/cards/1/block")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.status").value("BLOCKED"));
+    }
+
+    @Test
+    void unblockCard_ShouldUnblockCardSuccessfullyForAdmin() throws Exception {
+        Card unblockedCard = Card.builder()
+                .id(1L)
+                .cardNumber("1234567890123456")
+                .owner("Test Owner")
+                .expiryDate(LocalDate.now().plusYears(1))
+                .status(Card.CardStatus.ACTIVE)
+                .balance(BigDecimal.ZERO)
+                .user(testUser)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        when(cardService.unblockCard(1L)).thenReturn(unblockedCard);
+
+        mockMvc.perform(put("/api/admin/cards/1/unblock")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void deleteCard_ShouldDeleteCardSuccessfullyForAdmin() throws Exception {
+        mockMvc.perform(delete("/api/admin/cards/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Card deleted successfully"));
+    }
+
+    @Test
+    void getAllCardBlockRequests_ShouldReturnAllRequestsForAdmin() throws Exception {
+        CardBlockRequest request = CardBlockRequest.builder()
+                .id(1L)
+                .card(Card.builder()
+                        .id(1L)
+                        .cardNumber("1234567890123456")
+                        .owner("Test Owner")
+                        .build())
+                .requester(testUser)
+                .reason("Lost card")
+                .status(CardBlockRequest.RequestStatus.PENDING)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        List<CardBlockRequest> requests = Arrays.asList(request);
+        when(cardBlockRequestService.getAllRequests()).thenReturn(requests);
+        String maskedCardNumber = CardMasker.maskCardNumber(request.getCard().getCardNumber());
+
+        mockMvc.perform(get("/api/admin/card-block-requests")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].cardId").value(1))
+                .andExpect(jsonPath("$[0].cardNumber").value(maskedCardNumber))
+                .andExpect(jsonPath("$[0].requesterId").value(2))
+                .andExpect(jsonPath("$[0].reason").value("Lost card"))
+                .andExpect(jsonPath("$[0].status").value("PENDING"));
+    }
+
+    @Test
+    void getCardBlockRequestsByStatus_ShouldReturnRequestsByStatus() throws Exception {
+        CardBlockRequest request = CardBlockRequest.builder()
+                .id(1L)
+                .card(Card.builder()
+                        .id(1L)
+                        .cardNumber("1234567890123456")
+                        .owner("Test Owner")
+                        .build())
+                .requester(testUser)
+                .reason("Lost card")
+                .status(CardBlockRequest.RequestStatus.PENDING)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        List<CardBlockRequest> requests = Arrays.asList(request);
+        when(cardBlockRequestService.getRequestsByStatus(CardBlockRequest.RequestStatus.PENDING)).thenReturn(requests);
+
+        mockMvc.perform(get("/api/admin/card-block-requests/status/PENDING")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].status").value("PENDING"));
+    }
+
+    @Test
+    void approveCardBlockRequest_ShouldApproveRequestSuccessfully() throws Exception {
+        CardBlockRequest approvedRequest = CardBlockRequest.builder()
+                .id(1L)
+                .card(Card.builder()
+                        .id(1L)
+                        .cardNumber("1234567890123456")
+                        .owner("Test Owner")
+                        .status(Card.CardStatus.BLOCKED)
+                        .build())
+                .requester(testUser)
+                .reason("Lost card")
+                .status(CardBlockRequest.RequestStatus.APPROVED)
+                .processedBy(adminUser)
+                .processedAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        when(cardBlockRequestService.approveRequest(1L, 1L)).thenReturn(approvedRequest);
+
+        mockMvc.perform(put("/api/admin/card-block-requests/1/approve")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.processedById").value(1));
+    }
+
+    @Test
+    void rejectCardBlockRequest_ShouldRejectRequestSuccessfully() throws Exception {
+        CardBlockRequest rejectedRequest = CardBlockRequest.builder()
+                .id(1L)
+                .card(Card.builder()
+                        .id(1L)
+                        .cardNumber("1234567890123456")
+                        .owner("Test Owner")
+                        .status(Card.CardStatus.ACTIVE)
+                        .build())
+                .requester(testUser)
+                .reason("Lost card")
+                .status(CardBlockRequest.RequestStatus.REJECTED)
+                .processedBy(adminUser)
+                .processedAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        when(cardBlockRequestService.rejectRequest(1L, 1L)).thenReturn(rejectedRequest);
+
+        mockMvc.perform(put("/api/admin/card-block-requests/1/reject")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.status").value("REJECTED"))
+                .andExpect(jsonPath("$.processedById").value(1));
+    }
+
 }
