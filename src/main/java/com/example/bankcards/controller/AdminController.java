@@ -1,20 +1,28 @@
 package com.example.bankcards.controller;
 
+import com.example.bankcards.dto.AdminCardCreateRequest;
 import com.example.bankcards.dto.AdminAuthRegisterRequest;
+import com.example.bankcards.dto.CardResponse;
 import com.example.bankcards.dto.UserCreateRequest;
 import com.example.bankcards.dto.GenericErrorResponse;
 import com.example.bankcards.dto.GenericSuccessResponse;
 import com.example.bankcards.dto.UserUpdateRequest;
 import com.example.bankcards.dto.UserResponse;
+import com.example.bankcards.entity.Card;
 import com.example.bankcards.entity.User;
+import com.example.bankcards.service.CardService;
 import com.example.bankcards.service.UserService;
 import lombok.RequiredArgsConstructor;
+
+import java.math.BigDecimal;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+
 import java.util.List;
 
 @RestController
@@ -24,6 +32,7 @@ import java.util.List;
 public class AdminController {
 
     private final UserService userService;
+    private final CardService cardService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody AdminAuthRegisterRequest request,
@@ -189,6 +198,110 @@ public class AdminController {
             log.error("Error getting users by role: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(new GenericErrorResponse("Failed to get users: " + e.getMessage()));
+        }
+    }
+
+
+    @PostMapping("/cards")
+    public ResponseEntity<?> createCard(@Valid @RequestBody AdminCardCreateRequest request,
+                                        Authentication authentication) {
+        log.info("Creating card for user: {} by admin: {}", request.getUserId(), authentication.getName());
+
+        try {
+            Card card = Card.builder()
+                    .cardNumber(request.getCardNumber())
+                    .owner(request.getOwner())
+                    .expiryDate(request.getExpiryDate())
+                    .balance(request.getBalance() != null ? request.getBalance() : BigDecimal.ZERO)
+                    .build();
+
+            Card savedCard = cardService.createCard(card, request.getUserId());
+
+            log.info("Card created successfully by admin: {} with id: {}",
+                    authentication.getName(), savedCard.getId());
+
+            return ResponseEntity.ok(new CardResponse(savedCard));
+
+        } catch (Exception e) {
+            log.error("Error creating card: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to create card: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/cards")
+    public ResponseEntity<?> getAllCards(Authentication authentication) {
+        log.info("Admin {} getting all cards", authentication.getName());
+
+        try {
+            List<Card> cards = cardService.getAllCards();
+            List<CardResponse> responses = cards.stream()
+                    .map(CardResponse::new)
+                    .toList();
+
+            return ResponseEntity.ok(responses);
+
+        } catch (Exception e) {
+            log.error("Error getting all cards: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to get cards: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/cards/{id}/block")
+    public ResponseEntity<?> blockCard(@PathVariable Long id, Authentication authentication) {
+        log.info("Admin {} blocking card: {}", authentication.getName(), id);
+
+        try {
+            Card blockedCard = cardService.blockCard(id);
+
+            log.info("Card blocked successfully by admin: {} with id: {}",
+                    authentication.getName(), blockedCard.getId());
+
+            return ResponseEntity.ok(new CardResponse(blockedCard));
+
+        } catch (Exception e) {
+            log.error("Error blocking card: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to block card: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/cards/{id}/unblock")
+    public ResponseEntity<?> unblockCard(@PathVariable Long id, Authentication authentication) {
+        log.info("Admin {} unblocking card: {}", authentication.getName(), id);
+
+        try {
+            Card unblockedCard = cardService.unblockCard(id);
+
+            log.info("Card unblocked successfully by admin: {} with id: {}",
+                    authentication.getName(), unblockedCard.getId());
+
+            return ResponseEntity.ok(new CardResponse(unblockedCard));
+
+        } catch (Exception e) {
+            log.error("Error unblocking card: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to unblock card: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/cards/{id}")
+    public ResponseEntity<?> deleteCard(@PathVariable Long id, Authentication authentication) {
+        log.info("Admin {} deleting card: {}", authentication.getName(), id);
+
+        try {
+            cardService.deleteCard(id);
+
+            log.info("Card deleted successfully by admin: {} with id: {}",
+                    authentication.getName(), id);
+
+            return ResponseEntity.ok(new GenericSuccessResponse("Card deleted successfully"));
+
+        } catch (Exception e) {
+            log.error("Error deleting card: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to delete card: " + e.getMessage()));
         }
     }
 }
