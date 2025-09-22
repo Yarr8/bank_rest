@@ -1,4 +1,3 @@
-# src/main/resources/db/migration/changes/003-create-transactions-table.yaml
 databaseChangeLog:
   - changeSet:
       id: 003-create-transactions-table
