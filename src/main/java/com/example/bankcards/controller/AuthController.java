@@ -50,6 +50,25 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/validate")
+    public ResponseEntity<?> validateToken(@RequestBody AuthTokenRequest request) {
+        try {
+            String username = jwtUtil.extractUsername(request.getToken());
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            boolean isValid = jwtUtil.validateToken(request.getToken(), userDetails);
+
+            if (isValid) {
+                return ResponseEntity.ok(new TokenValidationResponse(true, "Token is valid"));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(new GenericErrorResponse("Invalid token"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Token validation failed"));
+        }
+    }
+
     // Response classes
     @Data
     public static class LoginResponse {
