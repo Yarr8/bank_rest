@@ -4,13 +4,16 @@ import com.example.bankcards.dto.AdminCardCreateRequest;
 import com.example.bankcards.dto.AdminAuthRegisterRequest;
 import com.example.bankcards.dto.CardResponse;
 import com.example.bankcards.dto.UserCreateRequest;
+import com.example.bankcards.dto.TransactionResponse;
 import com.example.bankcards.dto.GenericErrorResponse;
 import com.example.bankcards.dto.GenericSuccessResponse;
 import com.example.bankcards.dto.UserUpdateRequest;
 import com.example.bankcards.dto.UserResponse;
 import com.example.bankcards.entity.Card;
+import com.example.bankcards.entity.Transaction;
 import com.example.bankcards.entity.User;
 import com.example.bankcards.service.CardService;
+import com.example.bankcards.service.TransactionService;
 import com.example.bankcards.service.UserService;
 import lombok.RequiredArgsConstructor;
 
@@ -33,6 +36,7 @@ public class AdminController {
 
     private final UserService userService;
     private final CardService cardService;
+    private final TransactionService transactionService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody AdminAuthRegisterRequest request,
@@ -302,6 +306,25 @@ public class AdminController {
             log.error("Error deleting card: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(new GenericErrorResponse("Failed to delete card: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/transactions")
+    public ResponseEntity<?> getAllTransactions(Authentication authentication) {
+        log.info("Admin {} getting all transactions", authentication.getName());
+
+        try {
+            List<Transaction> transactions = transactionService.getAllTransactions();
+            List<TransactionResponse> responses = transactions.stream()
+                    .map(TransactionResponse::new)
+                    .toList();
+
+            return ResponseEntity.ok(responses);
+
+        } catch (Exception e) {
+            log.error("Error getting all transactions: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to get transactions: " + e.getMessage()));
         }
     }
 }
