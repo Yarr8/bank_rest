@@ -2,6 +2,7 @@ package com.example.bankcards.controller;
 
 import com.example.bankcards.dto.AdminCardCreateRequest;
 import com.example.bankcards.dto.AdminAuthRegisterRequest;
+import com.example.bankcards.dto.CardBlockRequestResponse;
 import com.example.bankcards.dto.CardResponse;
 import com.example.bankcards.dto.UserCreateRequest;
 import com.example.bankcards.dto.TransactionResponse;
@@ -10,22 +11,22 @@ import com.example.bankcards.dto.GenericSuccessResponse;
 import com.example.bankcards.dto.UserUpdateRequest;
 import com.example.bankcards.dto.UserResponse;
 import com.example.bankcards.entity.Card;
+import com.example.bankcards.entity.CardBlockRequest;
 import com.example.bankcards.entity.Transaction;
 import com.example.bankcards.entity.User;
+import com.example.bankcards.security.JwtUser;
+import com.example.bankcards.service.CardBlockRequestService;
 import com.example.bankcards.service.CardService;
 import com.example.bankcards.service.TransactionService;
 import com.example.bankcards.service.UserService;
 import lombok.RequiredArgsConstructor;
-
 import java.math.BigDecimal;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-
 import java.util.List;
 
 @RestController
@@ -37,6 +38,7 @@ public class AdminController {
     private final UserService userService;
     private final CardService cardService;
     private final TransactionService transactionService;
+    private final CardBlockRequestService cardBlockRequestService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody AdminAuthRegisterRequest request,
@@ -325,6 +327,96 @@ public class AdminController {
             log.error("Error getting all transactions: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(new GenericErrorResponse("Failed to get transactions: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/card-block-requests")
+    public ResponseEntity<?> getAllCardBlockRequests(Authentication authentication) {
+        log.info("Admin {} getting all card block requests", authentication.getName());
+
+        try {
+            List<CardBlockRequest> requests = cardBlockRequestService.getAllRequests();
+            List<CardBlockRequestResponse> responses = requests.stream()
+                    .map(CardBlockRequestResponse::new)
+                    .toList();
+
+            return ResponseEntity.ok(responses);
+
+        } catch (Exception e) {
+            log.error("Error getting card block requests: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to get card block requests: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/card-block-requests/status/{status}")
+    public ResponseEntity<?> getCardBlockRequestsByStatus(@PathVariable String status,
+                                                          Authentication authentication) {
+        log.info("Admin {} getting card block requests by status: {}", authentication.getName(), status);
+
+        try {
+            CardBlockRequest.RequestStatus requestStatus = CardBlockRequest.RequestStatus.valueOf(status.toUpperCase());
+            List<CardBlockRequest> requests = cardBlockRequestService.getRequestsByStatus(requestStatus);
+            List<CardBlockRequestResponse> responses = requests.stream()
+                    .map(CardBlockRequestResponse::new)
+                    .toList();
+
+            return ResponseEntity.ok(responses);
+
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid status: {}", status);
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Invalid status: " + status));
+        } catch (Exception e) {
+            log.error("Error getting card block requests by status: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to get card block requests: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/card-block-requests/{id}/approve")
+    public ResponseEntity<?> approveCardBlockRequest(@PathVariable Long id,
+                                                     Authentication authentication) {
+        log.info("Admin {} approving card block request: {}", authentication.getName(), id);
+
+        try {
+            JwtUser userDetails = (JwtUser) authentication.getPrincipal();
+            User admin = userDetails.getUser();
+
+            CardBlockRequest approvedRequest = cardBlockRequestService.approveRequest(id, admin.getId());
+
+            log.info("Card block request approved successfully by admin: {} with id: {}",
+                    authentication.getName(), id);
+
+            return ResponseEntity.ok(new CardBlockRequestResponse(approvedRequest));
+
+        } catch (Exception e) {
+            log.error("Error approving card block request: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to approve card block request: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/card-block-requests/{id}/reject")
+    public ResponseEntity<?> rejectCardBlockRequest(@PathVariable Long id,
+                                                    Authentication authentication) {
+        log.info("Admin {} rejecting card block request: {}", authentication.getName(), id);
+
+        try {
+            JwtUser userDetails = (JwtUser) authentication.getPrincipal();
+            User admin = userDetails.getUser();
+
+            CardBlockRequest rejectedRequest = cardBlockRequestService.rejectRequest(id, admin.getId());
+
+            log.info("Card block request rejected successfully by admin: {} with id: {}",
+                    authentication.getName(), id);
+
+            return ResponseEntity.ok(new CardBlockRequestResponse(rejectedRequest));
+
+        } catch (Exception e) {
+            log.error("Error rejecting card block request: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to reject card block request: " + e.getMessage()));
         }
     }
 }
