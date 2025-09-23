@@ -42,3 +42,7 @@ jwt:
 app:
   encryption:
     key: ${CARD_ENCRYPTION_KEY:MyCardKey1234567} # 16 symbols for AES-128
+
+springdoc:
+  swagger-ui:
+    url: /openapi.yaml
