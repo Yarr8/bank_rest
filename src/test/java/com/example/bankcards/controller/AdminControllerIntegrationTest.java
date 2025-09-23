@@ -29,6 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -571,4 +572,89 @@ class AdminControllerIntegrationTest {
                 .andExpect(jsonPath("$.processedById").value(1));
     }
 
+    @Test
+    void updateCard_Success() throws Exception {
+        LocalDate oldExpiryDate = LocalDate.of(2024, 12, 31);
+        LocalDate newExpiryDate = LocalDate.of(2025, 12, 31);
+
+        Card existingCard = Card.builder()
+                .id(1L)
+                .cardNumber("1234567890123456")
+                .owner("Old Owner")
+                .expiryDate(oldExpiryDate)
+                .balance(BigDecimal.valueOf(1000))
+                .status(Card.CardStatus.ACTIVE)
+                .user(testUser)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        Card updatedCard = Card.builder()
+                .id(1L)
+                .cardNumber("1234567890123456")
+                .owner("New Owner")
+                .expiryDate(newExpiryDate)
+                .balance(BigDecimal.valueOf(1000))
+                .status(Card.CardStatus.BLOCKED)
+                .user(testUser)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        when(cardService.getCardById(1L)).thenReturn(existingCard);
+        when(cardService.updateCard(any(Card.class))).thenReturn(updatedCard);
+
+        String updateRequest = """
+                {
+                    "owner": "New Owner",
+                    "expiryDate": "2025-12-31",
+                    "status": "BLOCKED"
+                }
+                """;
+
+        mockMvc.perform(put("/api/admin/cards/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.owner").value("New Owner"))
+                .andExpect(jsonPath("$.expiryDate").value("2025-12-31"))
+                .andExpect(jsonPath("$.status").value("BLOCKED"));
+    }
+
+    @Test
+    void updateCard_CardNotFound() throws Exception {
+        when(cardService.getCardById(999L)).thenThrow(new RuntimeException("Card not found"));
+
+        String updateRequest = """
+                {
+                    "owner": "New Owner",
+                    "expiryDate": "2025-12-31"
+                }
+                """;
+
+        mockMvc.perform(put("/api/admin/cards/999")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Failed to update card: Card not found"));
+    }
+
+    @Test
+    void updateCard_InvalidData() throws Exception {
+        String invalidRequest = """
+                {
+                    "owner": "",
+                    "expiryDate": "invalid"
+                }
+                """;
+
+        mockMvc.perform(put("/api/admin/cards/1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidRequest))
+                .andExpect(status().isBadRequest());
+    }
 }
