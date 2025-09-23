@@ -1,14 +1,17 @@
 package com.example.bankcards.exception;
 
 import com.example.bankcards.dto.GenericErrorResponse;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -64,4 +67,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(new GenericErrorResponse(ex.getMessage()));
     }
+
+@ExceptionHandler(HttpMessageNotReadableException.class)
+public ResponseEntity<?> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+    String message = "Invalid request body";
+
+    if (ex.getCause() instanceof InvalidFormatException) {
+        InvalidFormatException cause = (InvalidFormatException) ex.getCause();
+        if (cause.getTargetType() == LocalDate.class) {
+            message = "Invalid date format. Expected format: YYYY-MM-DD";
+        }
+    }
+
+    return ResponseEntity.badRequest()
+        .body(new GenericErrorResponse(message));
+}
 }
