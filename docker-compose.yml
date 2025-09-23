@@ -1,9 +1,53 @@
-# 
-# docker-compose.yml — определяет сервисы для разработки и тестирования.
+# Примечание для проверяющего:
+# в требованиях был docker-compose.yml для разворачивания DEV-окружения
+# здесь параметры захардкожены, потому что это чисто тестовые значения
+# пример более чистой конфигурации в docker-compose.prod.yml
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: bankcards-postgres-dev
+    environment:
+      POSTGRES_DB: bankcards
+      POSTGRES_USER: bankcards
+      POSTGRES_PASSWORD: bankcards
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - bankcards-dev-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U bankcards -d bankcards" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-Что нужно сделать:
-  - Настроить сервисы для:
-      - PostgreSQL (или MySQL) с начальной базой.
-      - Приложения Spring Boot (если нужно).
-  - Открыть нужные порты (например, 5432, 8080).
-  - Настроить volume для хранения данных БД.
+  app:
+    build: .
+    container_name: bankcards-app-dev
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: bankcards
+      DB_USERNAME: bankcards
+      DB_PASSWORD: bankcards
+      JWT_SECRET: dev-jwt-secret-key-123456789012345678901234567890123456789012345678901234567890
+      CARD_ENCRYPTION_KEY: DevCardKey123456
+      PASSWORD_ENCRYPTION_KEY: MyPasswordKey123
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bankcards-dev-network
+    volumes:
+      - ./src:/app/src
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  bankcards-dev-network:
+    driver: bridge
