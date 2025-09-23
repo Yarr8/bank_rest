@@ -191,25 +191,4 @@ class TransactionServiceTest {
 
         assertThrows(TransactionNotFoundException.class, () -> transactionService.getTransactionById(1L));
     }
-
-    @Test
-    void cancelTransaction_ShouldCancelPendingTransaction() {
-        testTransaction.setStatus(Transaction.TransactionStatus.PENDING);
-        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
-        when(transactionRepository.save(any(Transaction.class))).thenReturn(testTransaction);
-
-        Transaction result = transactionService.cancelTransaction(1L);
-
-        assertEquals(Transaction.TransactionStatus.CANCELLED, result.getStatus());
-        verify(transactionRepository).save(testTransaction);
-    }
-
-    @Test
-    void cancelTransaction_ShouldThrowExceptionWhenNotPending() {
-        testTransaction.setStatus(Transaction.TransactionStatus.COMPLETED);
-        when(transactionRepository.findById(1L)).thenReturn(Optional.of(testTransaction));
-
-        assertThrows(InvalidTransactionException.class, () -> transactionService.cancelTransaction(1L));
-        verify(transactionRepository, never()).save(any(Transaction.class));
-    }
 }

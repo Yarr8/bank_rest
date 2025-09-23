@@ -3,7 +3,6 @@ package com.example.bankcards.controller;
 import com.example.bankcards.dto.CardBlockRequestDto;
 import com.example.bankcards.dto.CardBlockRequestResponse;
 import com.example.bankcards.dto.CardResponse;
-import com.example.bankcards.dto.CardTopUpRequest;
 import com.example.bankcards.dto.GenericErrorResponse;
 import com.example.bankcards.dto.PaginatedResponse;
 import com.example.bankcards.dto.UserBalanceResponse;
@@ -106,36 +105,6 @@ public class CardController {
             log.error("Error getting card: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(new GenericErrorResponse("Failed to get card: " + e.getMessage()));
-        }
-    }
-
-    @PostMapping("/{id}/topup")
-    public ResponseEntity<?> topUpCard(@PathVariable Long id,
-                                       @Valid @RequestBody CardTopUpRequest request,
-                                       Authentication authentication) {
-        log.info("Topping up card: {} with amount: {} for user: {}",
-                id, request.getAmount(), authentication.getName());
-
-        try {
-            JwtUser userDetails = (JwtUser) authentication.getPrincipal();
-            User currentUser = userDetails.getUser();
-
-            if (!cardService.isCardOwnedByUser(id, currentUser.getId())) {
-                return ResponseEntity.badRequest()
-                        .body(new GenericErrorResponse("Card not found or access denied"));
-            }
-
-            Card toppedUpCard = cardService.topUpCard(id, request.getAmount());
-
-            log.info("Card topped up successfully: {} new balance: {}",
-                    id, toppedUpCard.getBalance());
-
-            return ResponseEntity.ok(new CardResponse(toppedUpCard));
-
-        } catch (Exception e) {
-            log.error("Error topping up card: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(new GenericErrorResponse("Failed to top up card: " + e.getMessage()));
         }
     }
 

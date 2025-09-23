@@ -99,24 +99,6 @@ public class TransactionService {
                 .orElseThrow(() -> new TransactionNotFoundException(id));
     }
 
-    @Transactional
-    public Transaction cancelTransaction(Long transactionId) {
-        log.info("Cancelling transaction: {}", transactionId);
-
-        Transaction transaction = getTransactionById(transactionId);
-
-        if (transaction.getStatus() != Transaction.TransactionStatus.PENDING) {
-            throw new InvalidTransactionException("Cannot cancel transaction in status: " + transaction.getStatus());
-        }
-
-        transaction.setStatus(Transaction.TransactionStatus.CANCELLED);
-
-        Transaction savedTransaction = transactionRepository.save(transaction);
-        log.info("Transaction cancelled successfully: {}", transactionId);
-
-        return savedTransaction;
-    }
-
     private void validateTransaction(Transaction transaction) {
         if (transaction.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidTransactionException("Transaction amount must be positive");

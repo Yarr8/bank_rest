@@ -2,7 +2,6 @@ package com.example.bankcards.service;
 
 import com.example.bankcards.entity.Card;
 import com.example.bankcards.entity.User;
-import com.example.bankcards.exception.CardBlockedException;
 import com.example.bankcards.exception.CardNotFoundException;
 import com.example.bankcards.exception.DuplicateCardNumberException;
 import com.example.bankcards.exception.UserNotFoundException;
@@ -56,19 +55,6 @@ public class CardService {
 
     public List<Card> getActiveUserCards(Long userId) {
         return cardRepository.findByUserIdAndStatus(userId, Card.CardStatus.ACTIVE);
-    }
-
-
-    @Transactional
-    public Card topUpCard(Long cardId, BigDecimal amount) {
-        Card card = getCardById(cardId);
-
-        if (card.getStatus() != Card.CardStatus.ACTIVE) {
-            throw new CardBlockedException("Cannot top up blocked or expired card");
-        }
-
-        card.setBalance(card.getBalance().add(amount));
-        return cardRepository.save(card);
     }
 
     public boolean isCardOwnedByUser(Long cardId, Long userId) {
@@ -146,5 +132,22 @@ public class CardService {
     public List<Card> getAllCards() {
         log.info("Getting all cards");
         return cardRepository.findAll();
+    }
+
+    @Transactional
+    public Card updateCard(Card card) {
+        log.info("Updating card with id: {}", card.getId());
+
+        Card existingCard = cardRepository.findById(card.getId())
+                .orElseThrow(() -> new CardNotFoundException("Card not found with id: " + card.getId()));
+
+        existingCard.setOwner(card.getOwner());
+        existingCard.setExpiryDate(card.getExpiryDate());
+        existingCard.setStatus(card.getStatus());
+
+        Card updatedCard = cardRepository.save(existingCard);
+        log.info("Card updated successfully with id: {}", updatedCard.getId());
+
+        return updatedCard;
     }
 }
