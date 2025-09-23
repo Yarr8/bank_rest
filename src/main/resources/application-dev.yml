@@ -10,6 +10,23 @@ spring:
     change-log: classpath:db/migration/db.changelog-master.yaml
     enabled: true
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    url: /openapi.yaml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
 logging:
   level:
     com.example.bankcards: DEBUG
+    org.springframework.security: DEBUG

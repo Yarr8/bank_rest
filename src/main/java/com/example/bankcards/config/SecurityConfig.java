@@ -3,6 +3,7 @@ package com.example.bankcards.config;
 import com.example.bankcards.security.JwtAuthenticationEntryPoint;
 import com.example.bankcards.security.JwtRequestFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,9 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtRequestFilter jwtRequestFilter;
 
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -38,23 +42,27 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(authz -> authz
-                        // Public endpoints
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/openapi.yaml").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
+                .authorizeHttpRequests(authz -> {
+                    authz
+                            // Public endpoints
+                            .requestMatchers("/api/auth/**").permitAll()
+                            .requestMatchers("/actuator/health").permitAll()
 
-                        // Admin endpoints
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                            // Admin endpoints
+                            .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // User endpoints
-                        .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/cards/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/transactions/**").hasAnyRole("USER", "ADMIN")
+                            // User endpoints
+                            .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
+                            .requestMatchers("/api/cards/**").hasAnyRole("USER", "ADMIN")
+                            .requestMatchers("/api/transactions/**").hasAnyRole("USER", "ADMIN");
 
-                        // All other endpoints require authentication
-                        .anyRequest().authenticated()
-                )
+                    // Swagger only for dev environment
+                    if (!"prod".equals(activeProfile)) {
+                        authz.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/openapi.yaml").permitAll();
+                    }
+
+                    authz.anyRequest().authenticated();
+                })
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
