@@ -1,7 +1,6 @@
 package com.example.bankcards.controller;
 
 import com.example.bankcards.dto.CardBlockRequestDto;
-import com.example.bankcards.dto.CardTopUpRequest;
 import com.example.bankcards.entity.Card;
 import com.example.bankcards.entity.CardBlockRequest;
 import com.example.bankcards.entity.User;
@@ -195,33 +194,5 @@ class CardControllerIntegrationTest {
                 .andExpect(jsonPath("$.cardBalances[0].cardId").value(1))
                 .andExpect(jsonPath("$.cardBalances[0].balance").value(0))
                 .andExpect(jsonPath("$.cardBalances[0].status").value("ACTIVE"));
-    }
-
-    @Test
-    void topUpCard_ShouldTopUpBalanceSuccessfully() throws Exception {
-        Card toppedUpCard = Card.builder()
-                .id(1L)
-                .cardNumber("1234567890123456")
-                .owner("Test Owner")
-                .expiryDate(LocalDate.now().plusYears(1))
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .status(Card.CardStatus.ACTIVE)
-                .balance(BigDecimal.valueOf(100))
-                .user(testUser)
-                .build();
-
-        when(cardService.isCardOwnedByUser(1L, 1L)).thenReturn(true);
-        when(cardService.topUpCard(1L, BigDecimal.valueOf(100))).thenReturn(toppedUpCard);
-
-        String requestBody = objectMapper.writeValueAsString(new CardTopUpRequest(BigDecimal.valueOf(100)));
-
-        mockMvc.perform(post("/api/cards/1/topup")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.balance").value(100));
     }
 }

@@ -1,6 +1,7 @@
 package com.example.bankcards.controller;
 
 import com.example.bankcards.dto.AdminCardCreateRequest;
+import com.example.bankcards.dto.AdminCardUpdateRequest;
 import com.example.bankcards.dto.AdminAuthRegisterRequest;
 import com.example.bankcards.dto.CardBlockRequestResponse;
 import com.example.bankcards.dto.CardResponse;
@@ -20,7 +21,9 @@ import com.example.bankcards.service.CardService;
 import com.example.bankcards.service.TransactionService;
 import com.example.bankcards.service.UserService;
 import lombok.RequiredArgsConstructor;
+
 import java.math.BigDecimal;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -308,6 +311,35 @@ public class AdminController {
             log.error("Error deleting card: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(new GenericErrorResponse("Failed to delete card: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/cards/{id}")
+    public ResponseEntity<?> updateCard(@PathVariable Long id,
+                                        @Valid @RequestBody AdminCardUpdateRequest request,
+                                        Authentication authentication) {
+        log.info("Admin {} updating card: {}", authentication.getName(), id);
+
+        try {
+            Card card = cardService.getCardById(id);
+            card.setOwner(request.getOwner());
+            card.setExpiryDate(request.getExpiryDate());
+
+            if (request.getStatus() != null) {
+                card.setStatus(request.getStatus());
+            }
+
+            Card updatedCard = cardService.updateCard(card);
+
+            log.info("Card updated successfully by admin: {} with id: {}",
+                    authentication.getName(), updatedCard.getId());
+
+            return ResponseEntity.ok(new CardResponse(updatedCard));
+
+        } catch (Exception e) {
+            log.error("Error updating card: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new GenericErrorResponse("Failed to update card: " + e.getMessage()));
         }
     }
 

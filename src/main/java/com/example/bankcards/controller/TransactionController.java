@@ -166,32 +166,4 @@ public class TransactionController {
                     .body(new GenericErrorResponse("Failed to get transaction: " + e.getMessage()));
         }
     }
-
-    @PostMapping("/{id}/cancel")
-    public ResponseEntity<?> cancelTransaction(@PathVariable Long id,
-                                               Authentication authentication) {
-        log.info("Cancelling transaction: {} for user: {}", id, authentication.getName());
-
-        try {
-            JwtUser userDetails = (JwtUser) authentication.getPrincipal();
-            User currentUser = userDetails.getUser();
-            Transaction transaction = transactionService.getTransactionById(id);
-
-            if (!transaction.getFromCard().getUser().getId().equals(currentUser.getId())) {
-                return ResponseEntity.status(403)
-                        .body(new GenericErrorResponse("Access denied"));
-            }
-
-            Transaction cancelledTransaction = transactionService.cancelTransaction(id);
-
-            log.info("Transaction cancelled successfully: {}", id);
-
-            return ResponseEntity.ok(new TransactionResponse(cancelledTransaction));
-
-        } catch (Exception e) {
-            log.error("Error cancelling transaction: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(new GenericErrorResponse("Failed to cancel transaction: " + e.getMessage()));
-        }
-    }
 }

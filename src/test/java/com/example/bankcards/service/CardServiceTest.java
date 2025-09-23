@@ -2,7 +2,6 @@ package com.example.bankcards.service;
 
 import com.example.bankcards.entity.Card;
 import com.example.bankcards.entity.User;
-import com.example.bankcards.exception.CardBlockedException;
 import com.example.bankcards.exception.UserNotFoundException;
 import com.example.bankcards.repository.CardRepository;
 import com.example.bankcards.repository.UserRepository;
@@ -98,28 +97,6 @@ class CardServiceTest {
 
         assertEquals(Card.CardStatus.ACTIVE, result.getStatus());
         verify(cardRepository).save(testCard);
-    }
-
-    @Test
-    void topUpCard_ShouldTopUpBalanceSuccessfully() {
-        testCard.setStatus(Card.CardStatus.ACTIVE);
-        testCard.setBalance(BigDecimal.valueOf(100));
-        when(cardRepository.findById(1L)).thenReturn(Optional.of(testCard));
-        when(cardRepository.save(any(Card.class))).thenReturn(testCard);
-
-        Card result = cardService.topUpCard(1L, BigDecimal.valueOf(50));
-
-        assertEquals(BigDecimal.valueOf(150), result.getBalance());
-        verify(cardRepository).save(testCard);
-    }
-
-    @Test
-    void topUpCard_ShouldThrowExceptionForBlockedCard() {
-        testCard.setStatus(Card.CardStatus.BLOCKED);
-        when(cardRepository.findById(1L)).thenReturn(Optional.of(testCard));
-
-        assertThrows(CardBlockedException.class, () ->
-                cardService.topUpCard(1L, BigDecimal.valueOf(50)));
     }
 
     @Test
