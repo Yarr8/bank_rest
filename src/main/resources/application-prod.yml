@@ -29,6 +29,14 @@ app:
     key: ${CARD_ENCRYPTION_KEY}
     password-key: ${PASSWORD_ENCRYPTION_KEY}
 
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+    allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+    max-age: ${CORS_MAX_AGE:3600}
+
+
 springdoc:
   api-docs:
     enabled: false
