@@ -35,6 +35,12 @@ services:
       JWT_SECRET: dev-jwt-secret-key-123456789012345678901234567890123456789012345678901234567890
       CARD_ENCRYPTION_KEY: DevCardKey123456
       PASSWORD_ENCRYPTION_KEY: MyPasswordKey123
+      # CORS Configuration
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8080
+      CORS_ALLOWED_METHODS: GET,POST,PUT,DELETE,OPTIONS
+      CORS_ALLOWED_HEADERS: "*"
+      CORS_ALLOW_CREDENTIALS: "true"
+      CORS_MAX_AGE: "3600"
     ports:
       - "8080:8080"
     depends_on:
