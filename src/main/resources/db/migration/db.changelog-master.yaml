@@ -6,4 +6,4 @@ databaseChangeLog:
   - include:
       file: db/migration/changes/003-create-transactions-table.yaml
   - include:
-      file: db/migration/changes/004-create-card-block-requests-table.yaml
+      file: db/migration/changes/005-create-card-block-requests-table.yaml
