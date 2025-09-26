@@ -1,7 +1,27 @@
 databaseChangeLog:
   - changeSet:
+      id: 005-0-check-parent-tables
+      author: bankcards
+      preConditions:
+        onFail: HALT
+        onError: HALT
+        onUpdateSQL: MARK_RAN
+        and:
+          - tableExists:
+              tableName: cards
+          - tableExists:
+              tableName: users
+      changes: [ ]  # no changes, only condition check
+  - changeSet:
       id: 005-create-card-block-requests-table
       author: bankcards
+      preConditions:
+        onFail: MARK_RAN
+        onError: HALT
+        onUpdateSQL: MARK_RAN
+        not:
+          - tableExists:
+              tableName: card_block_requests
       changes:
         - createTable:
             tableName: card_block_requests
